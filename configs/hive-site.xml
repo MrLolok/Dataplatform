@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<configuration>
+    <!-- PostgreSQL metastore -->
+    <property>
+        <name>javax.jdo.option.ConnectionURL</name>
+        <value>jdbc:postgresql://postgres:5432/metastore</value>
+    </property>
+    <property>
+        <name>javax.jdo.option.ConnectionDriverName</name>
+        <value>org.postgresql.Driver</value>
+    </property>
+    <property>
+        <name>javax.jdo.option.ConnectionUserName</name>
+        <value>hive_user</value>
+    </property>
+    <property>
+        <name>javax.jdo.option.ConnectionPassword</name>
+        <value>hive_password</value>
+    </property>
+
+    <!-- Hive metastore dialect -->
+    <property>
+        <name>datanucleus.autoCreateSchema</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hive.metastore.schema.verification</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hive.metastore.schema.verification.record.version</name>
+        <value>true</value>
+    </property>
+
+    <!-- Metastore warehouse location -->
+    <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>/user/hive/warehouse</value>
+        <description>Location of default database for the warehouse</description>
+    </property>
+</configuration>
