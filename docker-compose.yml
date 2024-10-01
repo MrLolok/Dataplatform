@@ -1,14 +1,16 @@
 services:
   postgres:
     image: postgres:17
+    hostname: postgres
     container_name: postgres
     environment:
-      - POSTGRES_DB=${DATABASE_NAME}
-      - POSTGRES_USER=${DATABASE_USER}
-      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
-      - PGUSER=${DATABASE_USER}
+      - POSTGRES_DB=${MATASTORE_DATABASE_NAME}
+      - POSTGRES_USER=${MATASTORE_DATABASE_USER}
+      - POSTGRES_PASSWORD=${MATASTORE_DATABASE_PASSWORD}
+      - PGUSER=${MATASTORE_DATABASE_USER}
     volumes:
       - ./postgres/init-hive-metastore.sql:/docker-entrypoint-initdb.d/init-hive-metastore.sql
+      - ./postgres/init-hue.sql:/docker-entrypoint-initdb.d/init-hue.sql
       - postgres-volume:/var/lib/postgresql/data
     ports:
       - "5432:5432"
@@ -34,14 +36,14 @@ services:
       - HDFS_SECONDARYNAMENODE_USER=hdfs
       - CLUSTER_NAME=hadoop-cluster
     volumes:
-      - ./hadoop/namenode/data:/hadoop/dfs/name
+      - namenode-data-volume:/hadoop/dfs/name
     ports:
       - "9870:9870" # NameNode Web UI
       - "9820:9820" # NameNode RPC
     networks:
       - hadoop-network
     healthcheck:
-      test: ["CMD-SHELL", "hdfs dfsadmin -report"]
+      test: ["CMD-SHELL", "netstat -pnl | grep 9870"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -59,13 +61,13 @@ services:
       - HDFS_DATANODE_USER=hdfs
       - HDFS_SECONDARYNAMENODE_USER=hdfs
     volumes:
-      - ./hadoop/datanode/data:/hadoop/dfs/data
+      - datanode-data-volume:/hadoop/dfs/data
     ports:
       - "9864:9864" # DataNode Web UI
     networks:
       - hadoop-network
     healthcheck:
-      test: ["CMD-SHELL", "hdfs dfsadmin -report"]
+      test: ["CMD-SHELL", "netstat -pnl | grep 9864"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -80,6 +82,8 @@ services:
     hostname: resourcemanager
     ports:
       - "8088:8088" # ResourceManager Web UI
+      - "8032:8032" # ResourceManager
+      - "19888:19888" # HistoryServer
     depends_on:
       namenode:
         condition: service_healthy
@@ -137,16 +141,13 @@ services:
     image: gethue/hue:${DOCKER_HUE_TAG}
     hostname: hue
     container_name: hue
-    environment:
-      - HUE_CONF_DIR=/hue/desktop/conf
-      - HUE_IGNORE_PASSWORD_SCRIPT_ERRORS=true
     volumes:
-      - ./hue:/hue/desktop/conf
+      - ./hue/hue.ini:/usr/share/hue/desktop/conf/z-hue.ini
     ports:
       - "8888:8888"
     depends_on:
       hive:
-        condition: service_healthy
+        condition: service_started
     networks:
       - hadoop-network
     healthcheck:
@@ -157,6 +158,8 @@ services:
 
 volumes:
   postgres-volume:
+  namenode-data-volume:
+  datanode-data-volume:
 
 networks:
   hadoop-network:

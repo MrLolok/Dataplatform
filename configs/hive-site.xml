@@ -1,5 +1,25 @@
 <?xml version="1.0"?>
 <configuration>
+    <property>
+        <name>hive.server2.enable.doAs</name>
+        <value>true</value>
+    </property>
+    <property>
+        <!-- Required for automatic metadata sync. -->
+        <name>hive.metastore.dml.events</name>
+        <value>true</value>
+    </property>
+    <property>
+        <!-- User impala is not authorized to consume notifications by default, disable authentication to work around this. -->
+        <name>hive.metastore.event.db.notification.api.auth</name>
+        <value>false</value>
+    </property>
+    <property>
+        <!-- Hive stats autogathering negatively affects latency of DDL operations, etc and is not particularly useful for Impala -->
+        <name>hive.stats.autogather</name>
+        <value>false</value>
+    </property>
+
     <!-- PostgreSQL metastore -->
     <property>
         <name>javax.jdo.option.ConnectionURL</name>
@@ -11,17 +31,17 @@
     </property>
     <property>
         <name>javax.jdo.option.ConnectionUserName</name>
-        <value>hive_user</value>
+        <value>hive</value>
     </property>
     <property>
         <name>javax.jdo.option.ConnectionPassword</name>
-        <value>hive_password</value>
+        <value>password</value>
     </property>
 
     <!-- Hive metastore dialect -->
     <property>
         <name>datanucleus.autoCreateSchema</name>
-        <value>true</value>
+        <value>false</value>
     </property>
     <property>
         <name>hive.metastore.schema.verification</name>
@@ -37,5 +57,35 @@
         <name>hive.metastore.warehouse.dir</name>
         <value>/user/hive/warehouse</value>
         <description>Location of default database for the warehouse</description>
+    </property>
+    <property>
+        <name>hive.metastore.warehouse.external.dir</name>
+        <value>/user/hive/warehouse/external</value>
+        <description>Location of default database for the warehouse</description>
+    </property>
+
+    <!-- Partitioning & Bucketing -->
+    <property>
+        <name>hive.enforce.bucketing</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hive.exec.dynamic.partition</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hive.exec.dynamic.partition.mode</name>
+        <value>nonstrict</value>
+    </property>
+
+    <property>
+        <!-- Required to enable Hive transactions -->
+        <name>hive.support.concurrency</name>
+        <value>true</value>
+    </property>
+    <property>
+        <!-- Required to enable Hive transactions -->
+        <name>hive.txn.manager</name>
+        <value>org.apache.hadoop.hive.ql.lockmgr.DbTxnManager</value>
     </property>
 </configuration>

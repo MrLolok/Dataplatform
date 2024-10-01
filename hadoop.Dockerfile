@@ -1,23 +1,30 @@
-FROM debian:bookworm-slim
+FROM debian:bullseye-slim
 
 # Installazione pacchetti Debian
-RUN apt-get update && apt-get install -y sudo wget ssh openjdk-17-jdk
+RUN apt-get update && apt-get install -y sudo wget ssh net-tools openjdk-11-jdk
 RUN mkdir /var/run/sshd
 RUN service ssh start
 
 ARG HADOOP_VERSION=3.4.0
 
-# Installazione Hadoop
-RUN wget https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz
-RUN mkdir -p /home/hadoop
-RUN tar -xvf hadoop-${HADOOP_VERSION}.tar.gz -C /home/hadoop --strip-components=1
-RUN rm hadoop-*.tar.gz
-
-# Impostazione delle variabili di ambiente di Hadoop
+# Crazione dell'utente 'hdfs' e impostazione delle variabili d'ambiente
 ENV HADOOP_HOME /home/hadoop
+ENV HADOOP_USER_NAME hdfs
+ENV HDFS_NAMENODE_USER=$HADOOP_USER_NAME
+ENV HDFS_DATANODE_USER=$HADOOP_USER_NAME
+ENV HDFS_SECONDARYNAMENODE_USER=$HADOOP_USER_NAME
 ENV HADOOP_OPTS="$HADOOP_OPTS --add-opens java.base/java.lang=ALL-UNNAMED"
 ENV PATH $HADOOP_HOME/bin:$PATH
-RUN mkdir -p /home/hadoop/tmp /home/hadoop/logs /home/hadoop/data
+
+RUN useradd -m $HADOOP_USER_NAME
+RUN mkdir -p $HADOOP_HOME/tmp $HADOOP_HOME/logs $HADOOP_HOME/data
+RUN chown -R hdfs:hdfs $HADOOP_HOME
+
+# Installazione Hadoop
+#RUN wget https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz
+COPY downloads/hadoop-${HADOOP_VERSION}.tar.gz .
+RUN tar --owner=$HADOOP_USER_NAME -xvf hadoop-${HADOOP_VERSION}.tar.gz -C $HADOOP_HOME --strip-components=1
+RUN rm hadoop-*.tar.gz
 
 # Impostazione SSH passwordless per le comunicazioni di Hadoop
 RUN ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa && \
@@ -25,23 +32,14 @@ RUN ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa && \
     chmod 0600 ~/.ssh/authorized_keys
 
 # Creazione dei file di configurazione di Hadoop
-COPY configs/core-site.xml $HADOOP_HOME/etc/hadoop/
-COPY configs/hdfs-site.xml $HADOOP_HOME/etc/hadoop/
-COPY configs/mapred-site.xml $HADOOP_HOME/etc/hadoop/
-COPY configs/yarn-site.xml $HADOOP_HOME/etc/hadoop/
-COPY configs/hadoop-env.sh $HADOOP_HOME/etc/hadoop/
-
-# Crazione dell'utente 'hdfs' e impostazione dei permessi
-RUN useradd -m hdfs
-RUN chown -R hdfs:hdfs /home/hadoop
-
-ENV HADOOP_USER_NAME hdfs
-ENV HDFS_NAMENODE_USER=hdfs
-ENV HDFS_DATANODE_USER=hdfs
-ENV HDFS_SECONDARYNAMENODE_USER=hdfs
+COPY --chown=$HADOOP_USER_NAME configs/core-site.xml $HADOOP_HOME/etc/hadoop/
+COPY --chown=$HADOOP_USER_NAME configs/hdfs-site.xml $HADOOP_HOME/etc/hadoop/
+COPY --chown=$HADOOP_USER_NAME configs/mapred-site.xml $HADOOP_HOME/etc/hadoop/
+COPY --chown=$HADOOP_USER_NAME configs/yarn-site.xml $HADOOP_HOME/etc/hadoop/
+COPY --chown=$HADOOP_USER_NAME configs/hadoop-env.sh $HADOOP_HOME/etc/hadoop/
 
 # Esposizione delle porte
-EXPOSE 9870 9864 9820 8090 8088 8042
+EXPOSE 19888 9870 9864 9820 8090 8088 8042
 
 # Entrypoint script per NameNode e DataNode
 COPY scripts/hadoop_entrypoint.sh /hadoop_entrypoint.sh

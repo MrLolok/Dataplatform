@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 if [[ $HOSTNAME == "namenode" ]]; then
   if [ ! -d "/home/hadoop/dfs/name/current" ]; then
@@ -19,6 +18,7 @@ elif [[ $HOSTNAME == "datanode" ]]; then
 elif [[ $HOSTNAME == "resourcemanager" ]]; then
   echo "Starting ResourceManager..."
   yarn resourcemanager
+  mapred historyserver
 
 elif [[ $HOSTNAME == "nodemanager" ]]; then
   echo "Starting NodeManager..."
