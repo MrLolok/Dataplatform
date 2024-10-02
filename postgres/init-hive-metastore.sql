@@ -1,5 +1,9 @@
--- CREATE DATABASE metastore;
--- CREATE USER hive WITH ENCRYPTED PASSWORD 'password';
--- GRANT ALL PRIVILEGES ON DATABASE metastore TO hive;
--- \c metastore postgres
--- GRANT ALL ON SCHEMA public TO hive;
+CREATE USER hive WITH PASSWORD 'hivepassword';
+CREATE DATABASE metastore WITH OWNER hive;
+GRANT ALL PRIVILEGES ON DATABASE metastore TO hive;
+
+\c metastore;
+GRANT USAGE ON SCHEMA public TO hive;
+GRANT CREATE ON SCHEMA public TO hive;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO hive;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO hive;

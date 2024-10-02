@@ -19,6 +19,10 @@
         <name>hive.stats.autogather</name>
         <value>false</value>
     </property>
+    <property>
+        <name>hive.metastore.uris</name>
+        <value>thrift://hive:9083</value>
+    </property>
 
     <!-- PostgreSQL metastore -->
     <property>
@@ -35,7 +39,7 @@
     </property>
     <property>
         <name>javax.jdo.option.ConnectionPassword</name>
-        <value>password</value>
+        <value>hivepassword</value>
     </property>
 
     <!-- Hive metastore dialect -->
@@ -64,11 +68,7 @@
         <description>Location of default database for the warehouse</description>
     </property>
 
-    <!-- Partitioning & Bucketing -->
-    <property>
-        <name>hive.enforce.bucketing</name>
-        <value>true</value>
-    </property>
+    <!-- Partitioning -->
     <property>
         <name>hive.exec.dynamic.partition</name>
         <value>true</value>

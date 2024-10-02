@@ -4,10 +4,10 @@ services:
     hostname: postgres
     container_name: postgres
     environment:
-      - POSTGRES_DB=${MATASTORE_DATABASE_NAME}
-      - POSTGRES_USER=${MATASTORE_DATABASE_USER}
-      - POSTGRES_PASSWORD=${MATASTORE_DATABASE_PASSWORD}
-      - PGUSER=${MATASTORE_DATABASE_USER}
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_USER=${DATABASE_USER}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - PGUSER=${DATABASE_USER}
     volumes:
       - ./postgres/init-hive-metastore.sql:/docker-entrypoint-initdb.d/init-hive-metastore.sql
       - ./postgres/init-hue.sql:/docker-entrypoint-initdb.d/init-hue.sql
@@ -126,9 +126,12 @@ services:
         condition: service_healthy
       datanode:
         condition: service_healthy
+    volumes:
+      - hive-warehouse-volume:/var/lib/hive
     ports:
       - "10000:10000" # HiveServer2
       - "10002:10002" # Hive Metastore Thrift
+      - "9083:9083"   # Hive Metastore Endpoint
     networks:
       - hadoop-network
     healthcheck:
@@ -137,17 +140,156 @@ services:
       timeout: 10s
       retries: 5
 
+  impalad:
+    image: apache/impala:${DOCKER_IMPALA_COORD_EXEC_TAG}
+    hostname: impalad
+    container_name: impalad
+    depends_on:
+      statestored:
+        condition: service_healthy
+        restart: true
+      catalogd:
+        condition: service_started
+    ports:
+      - "21000:21000" # Beeswax endpoint (deprecated)
+      - "21050:21050" # HS2 endpoint
+      - "25000:25000" # Web debug UI
+      - "28000:28000" # HS2 over HTTP endpoint.
+    command: ["-redirect_stdout_stderr=false", "-logtostderr", "-v=1", "-mt_dop_auto_fallback=true", "-default_query_options=mt_dop=8,default_file_format=parquet,default_transactional_type=insert_only", "-mem_limit=2gb"]
+    environment:
+      - JAVA_TOOL_OPTIONS="-Xmx1g"
+    volumes:
+      - ./hive/hive-site.xml:/opt/impala/conf/hive-site.xml
+    networks:
+      - hadoop-network
+    healthcheck:
+      test: ["CMD-SHELL", "cat /proc/net/tcp | awk '{ if ($2 ~ /523A/) { print \"OK\" } }'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  statestored:
+    image: apache/impala:${DOCKER_IMPALA_STATESTORED_TAG}
+    hostname: statestored
+    container_name: statestored
+    ports:
+      - "25010:25010" # Web debug UI
+    command: ["-redirect_stdout_stderr=false", "-logtostderr", "-v=1"]
+    volumes:
+      - ./hive/hive-site.xml:/opt/impala/conf/hive-site.xml
+    networks:
+      - hadoop-network
+    healthcheck:
+      test: ["CMD-SHELL", "cat /proc/net/tcp | awk '{ if ($2 ~ /5DC0/) { print \"OK\" } }'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  catalogd:
+    image: apache/impala:${DOCKER_IMPALA_CATALOGD_TAG}
+    hostname: catalogd
+    container_name: catalogd
+    depends_on:
+      statestored:
+        condition: service_healthy
+      hive:
+        condition: service_healthy
+    ports:
+      - "25020:25020" # Web debug UI
+    command: ["-redirect_stdout_stderr=false", "-logtostderr", "-v=1", "-hms_event_polling_interval_s=1", "-invalidate_tables_timeout_s=999999"]
+    volumes:
+      - ./hive/hive-site.xml:/opt/impala/conf/hive-site.xml
+    networks:
+      - hadoop-network
+    healthcheck:
+      test: ["CMD-SHELL", "cat /proc/net/tcp | awk '{ if ($2 ~ /59EC/) { print \"OK\" } }'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  spark-master:
+    build:
+      context: .
+      dockerfile: spark.Dockerfile
+    hostname: spark-master
+    container_name: spark-master
+    ports:
+      - "18080:18080" # History Web UI
+      - "7077:7077" # Standalone Master
+      - "6066:6066" # Standalone Master REST API
+      - "4040:4040" # Web UI
+    environment:
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    volumes:
+      - spark-events-volume:/tmp/spark-events
+    networks:
+      - hadoop-network
+
+  spark-worker:
+    build:
+      context: .
+      dockerfile: spark.Dockerfile
+    hostname: spark-worker
+    container_name: spark-worker
+    depends_on:
+      spark-master:
+        condition: service_started
+    ports:
+      - "4041:4040" # Web UI
+    environment:
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    networks:
+      - hadoop-network
+
+  livy:
+    build:
+      context: .
+      dockerfile: livy.Dockerfile
+      args:
+        - LIVY_VERSION=${DOCKER_LIVY_VERSION}
+        - LIVY_SCALA_VERSION=${DOCKER_LIVY_SCALA_VERSION}
+    hostname: livy
+    container_name: livy
+    depends_on:
+      spark-master:
+        condition: service_started
+    ports:
+      - "8998:8998"
+    environment:
+      - HADOOP_CONF_DIR=/etc/hadoop/conf
+    volumes:
+      - ./livy/livy.conf:/opt/livy/conf/livy.conf
+      - ./hadoop:/etc/hadoop/conf
+    networks:
+      - hadoop-network
+
   hue:
     image: gethue/hue:${DOCKER_HUE_TAG}
     hostname: hue
     container_name: hue
-    volumes:
-      - ./hue/hue.ini:/usr/share/hue/desktop/conf/z-hue.ini
+    depends_on:
+      namenode:
+        condition: service_healthy
+        restart: true
+      hive:
+        condition: service_healthy
+        restart: true
+      impalad:
+        condition: service_started
+      livy:
+        condition: service_started
     ports:
       - "8888:8888"
-    depends_on:
-      hive:
-        condition: service_started
+    volumes:
+      - ./hue/hue.ini:/usr/share/hue/desktop/conf/z-hue.ini
     networks:
       - hadoop-network
     healthcheck:
@@ -160,7 +302,10 @@ volumes:
   postgres-volume:
   namenode-data-volume:
   datanode-data-volume:
+  hive-warehouse-volume:
+  spark-events-volume:
 
 networks:
   hadoop-network:
+    name: hadoop-network
     driver: bridge

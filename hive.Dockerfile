@@ -30,25 +30,25 @@ RUN chown -R hdfs:hdfs $HIVE_HOME
 # Installazione Hadoop
 #RUN wget https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz
 COPY downloads/hadoop-${HADOOP_VERSION}.tar.gz .
-RUN tar --owner=$HADOOP_USER_NAME -xvf hadoop-${HADOOP_VERSION}.tar.gz -C $HADOOP_HOME --strip-components=1
-RUN rm hadoop-*.tar.gz
-RUN rm $HADOOP_HOME/share/hadoop/common/lib/slf4j-reload4j-*.jar
+RUN tar --owner=$HADOOP_USER_NAME -xvf hadoop-${HADOOP_VERSION}.tar.gz -C $HADOOP_HOME --strip-components=1 && \
+    rm $HADOOP_HOME/share/hadoop/common/lib/slf4j-reload4j-*.jar && \
+    rm hadoop-*.tar.gz
 
 # Installazione Hive
 #RUN wget https://archive.apache.org/dist/hive/hive-${HIVE_VERSION}/apache-hive-${HIVE_VERSION}-bin.tar.gz
 COPY downloads/apache-hive-${HIVE_VERSION}-bin.tar.gz .
-RUN tar --owner=$HADOOP_USER_NAME -xvf apache-hive-${HIVE_VERSION}-bin.tar.gz -C $HIVE_HOME --strip-components=1
-RUN rm apache-hive-*-bin.tar.gz
+RUN tar --owner=$HADOOP_USER_NAME -xvf apache-hive-${HIVE_VERSION}-bin.tar.gz -C $HIVE_HOME --strip-components=1 && \
+    rm apache-hive-*-bin.tar.gz
 
 # PostgreSQL JDBC Driver
 RUN wget https://jdbc.postgresql.org/download/postgresql-${POSTGRESQL_JDBC_VERSION}.jar -P $HIVE_HOME/lib/
 
 # Creazione dei file di configurazione di Hive e Hadoop
-COPY --chown=$HADOOP_USER_NAME configs/hive-site.xml /home/hive/conf/hive-site.xml
-COPY --chown=$HADOOP_USER_NAME configs/hadoop-env.sh $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+COPY --chown=$HADOOP_USER_NAME hive/hive-site.xml /home/hive/conf/hive-site.xml
+COPY --chown=$HADOOP_USER_NAME hadoop/hadoop-env.sh $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 
 # Esposizione delle porte
-EXPOSE 10000 10002
+EXPOSE 9083 10000 10002
 
 # Entrypoint script per Hive
 COPY scripts/hive_entrypoint.sh /hive_entrypoint.sh

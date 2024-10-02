@@ -32,11 +32,11 @@ RUN ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa && \
     chmod 0600 ~/.ssh/authorized_keys
 
 # Creazione dei file di configurazione di Hadoop
-COPY --chown=$HADOOP_USER_NAME configs/core-site.xml $HADOOP_HOME/etc/hadoop/
-COPY --chown=$HADOOP_USER_NAME configs/hdfs-site.xml $HADOOP_HOME/etc/hadoop/
-COPY --chown=$HADOOP_USER_NAME configs/mapred-site.xml $HADOOP_HOME/etc/hadoop/
-COPY --chown=$HADOOP_USER_NAME configs/yarn-site.xml $HADOOP_HOME/etc/hadoop/
-COPY --chown=$HADOOP_USER_NAME configs/hadoop-env.sh $HADOOP_HOME/etc/hadoop/
+COPY --chown=$HADOOP_USER_NAME hadoop/core-site.xml $HADOOP_HOME/etc/hadoop/
+COPY --chown=$HADOOP_USER_NAME hadoop/hdfs-site.xml $HADOOP_HOME/etc/hadoop/
+COPY --chown=$HADOOP_USER_NAME hadoop/mapred-site.xml $HADOOP_HOME/etc/hadoop/
+COPY --chown=$HADOOP_USER_NAME hadoop/yarn-site.xml $HADOOP_HOME/etc/hadoop/
+COPY --chown=$HADOOP_USER_NAME hadoop/hadoop-env.sh $HADOOP_HOME/etc/hadoop/
 
 # Esposizione delle porte
 EXPOSE 19888 9870 9864 9820 8090 8088 8042
