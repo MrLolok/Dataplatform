@@ -4,6 +4,7 @@ FROM debian:bullseye-slim
 RUN apt-get update && apt-get install -y sudo wget ssh net-tools openjdk-11-jdk
 RUN mkdir /var/run/sshd
 RUN service ssh start
+ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
 
 ARG HADOOP_VERSION=3.4.0
 ARG HIVE_VERSION=4.0.0
@@ -44,13 +45,14 @@ RUN tar --owner=$HADOOP_USER_NAME -xvf apache-hive-${HIVE_VERSION}-bin.tar.gz -C
 RUN wget https://jdbc.postgresql.org/download/postgresql-${POSTGRESQL_JDBC_VERSION}.jar -P $HIVE_HOME/lib/
 
 # Creazione dei file di configurazione di Hive e Hadoop
-COPY --chown=$HADOOP_USER_NAME hive/hive-site.xml /home/hive/conf/hive-site.xml
-COPY --chown=$HADOOP_USER_NAME hadoop/hadoop-env.sh $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+COPY --chown=$HADOOP_USER_NAME hive/hive-site.xml $HIVE_CONF_DIR/hive-site.xml
 
 # Esposizione delle porte
-EXPOSE 9083 10000 10002
+EXPOSE 9083 10000 10001 10002
 
 # Entrypoint script per Hive
 COPY scripts/hive_entrypoint.sh /hive_entrypoint.sh
 RUN chmod +x /hive_entrypoint.sh
+
+USER $HADOOP_USER_NAME
 ENTRYPOINT ["/hive_entrypoint.sh"]

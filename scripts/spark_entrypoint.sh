@@ -14,6 +14,9 @@ spark_worker() {
   $SPARK_HOME/sbin/start-thriftserver.sh
 }
 
+export HIVE_SERVER2_THRIFT_PORT=10000
+export HIVE_SERVER2_THRIFT_BIND_HOST=hive
+
 if [[ $HOSTNAME == "spark-master" ]]; then
   echo "Starting Spark Master node..."
   export SPARK_MODE=master

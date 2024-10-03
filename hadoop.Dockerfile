@@ -4,6 +4,7 @@ FROM debian:bullseye-slim
 RUN apt-get update && apt-get install -y sudo wget ssh net-tools openjdk-11-jdk
 RUN mkdir /var/run/sshd
 RUN service ssh start
+ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
 
 ARG HADOOP_VERSION=3.4.0
 
@@ -18,7 +19,7 @@ ENV PATH $HADOOP_HOME/bin:$PATH
 
 RUN useradd -m $HADOOP_USER_NAME
 RUN mkdir -p $HADOOP_HOME/tmp $HADOOP_HOME/logs $HADOOP_HOME/data
-RUN chown -R hdfs:hdfs $HADOOP_HOME
+RUN chown -R $HADOOP_USER_NAME:$HADOOP_USER_NAME $HADOOP_HOME
 
 # Installazione Hadoop
 #RUN wget https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz
@@ -36,7 +37,6 @@ COPY --chown=$HADOOP_USER_NAME hadoop/core-site.xml $HADOOP_HOME/etc/hadoop/
 COPY --chown=$HADOOP_USER_NAME hadoop/hdfs-site.xml $HADOOP_HOME/etc/hadoop/
 COPY --chown=$HADOOP_USER_NAME hadoop/mapred-site.xml $HADOOP_HOME/etc/hadoop/
 COPY --chown=$HADOOP_USER_NAME hadoop/yarn-site.xml $HADOOP_HOME/etc/hadoop/
-COPY --chown=$HADOOP_USER_NAME hadoop/hadoop-env.sh $HADOOP_HOME/etc/hadoop/
 
 # Esposizione delle porte
 EXPOSE 19888 9870 9864 9820 8090 8088 8042
@@ -44,4 +44,6 @@ EXPOSE 19888 9870 9864 9820 8090 8088 8042
 # Entrypoint script per NameNode e DataNode
 COPY scripts/hadoop_entrypoint.sh /hadoop_entrypoint.sh
 RUN chmod +x /hadoop_entrypoint.sh
+
+USER $HADOOP_USER_NAME 
 ENTRYPOINT ["/hadoop_entrypoint.sh"]

@@ -56,15 +56,22 @@
         <value>true</value>
     </property>
 
+    <!-- Spark -->
+    <property>
+        <name>hive.execution.engine</name>
+        <value>spark</value>
+        <description>Set the execution engine to Spark instead of MapReduce.</description>
+    </property>
+    <property>
+        <name>spark.master</name>
+        <value>spark://spark-master:7077</value>
+        <description>The Spark master URL for running jobs.</description>
+    </property>
+
     <!-- Metastore warehouse location -->
     <property>
         <name>hive.metastore.warehouse.dir</name>
-        <value>/user/hive/warehouse</value>
-        <description>Location of default database for the warehouse</description>
-    </property>
-    <property>
-        <name>hive.metastore.warehouse.external.dir</name>
-        <value>/user/hive/warehouse/external</value>
+        <value>hdfs://namenode:9820/user/hdfs/warehouse</value>
         <description>Location of default database for the warehouse</description>
     </property>
 
